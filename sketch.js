@@ -154,8 +154,8 @@ class Player {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.w = 100;
-    this.h = 200;
+    this.w = 60;
+    this.h = 90;
     this.vx = 0;
     this.vy = 0;
     this.speed = 4.5;
@@ -261,8 +261,8 @@ class Coin {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.w = 24;
-    this.h = 24;
+    this.w = 40;
+    this.h = 40;
     this.animAngle = Math.random() * Math.PI;
     this.collected = false;
   }
@@ -293,8 +293,8 @@ class Enemy {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.w = 32;
-    this.h = 32;
+    this.w = 48;
+    this.h = 48;
     this.vx = -1.2;
     this.vy = 0;
     this.isSquished = false;
@@ -485,12 +485,12 @@ function initLevel() {
   }
 
   // Posisi musuh
-  enemies.push(new Enemy(450, GROUND_Y - 32));
-  enemies.push(new Enemy(950, GROUND_Y - 32));
-  enemies.push(new Enemy(1300, GROUND_Y - 32));
-  enemies.push(new Enemy(1750, GROUND_Y - 32));
-  enemies.push(new Enemy(2150, GROUND_Y - 32));
-  enemies.push(new Enemy(2800, GROUND_Y - 32));
+  enemies.push(new Enemy(450, GROUND_Y - 48));
+  enemies.push(new Enemy(950, GROUND_Y - 48));
+  enemies.push(new Enemy(1300, GROUND_Y - 48));
+  enemies.push(new Enemy(1750, GROUND_Y - 48));
+  enemies.push(new Enemy(2150, GROUND_Y - 48));
+  enemies.push(new Enemy(2800, GROUND_Y - 48));
 
   flagPole = new FlagPole(3300, GROUND_Y - 240);
 
