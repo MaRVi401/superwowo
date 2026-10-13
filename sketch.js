@@ -1,12 +1,14 @@
 let playerImg;
 let coinImg;
 let enemyImg;
+let bgImg;
 
 // 1. Preload Gambar
 function preload() {
   playerImg = loadImage("wowo.png");
   coinImg = loadImage("mbg.png");
   enemyImg = loadImage("enemy.png");
+  bgImg = loadImage("bg.png");
 }
 
 // Web Audio Synthesizer for Retro Sound Effects
@@ -152,8 +154,8 @@ class Player {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.w = 36;
-    this.h = 48;
+    this.w = 60;
+    this.h = 90;
     this.vx = 0;
     this.vy = 0;
     this.speed = 4.5;
@@ -316,6 +318,26 @@ class Enemy {
         this.vx *= -1;
         break;
       }
+    }
+
+    let checkPointX = this.vx > 0 ? this.x + this.w : this.x;
+    let isGroundAhead = false;
+
+    for (let b of platforms) {
+      if (
+        checkPointX >= b.x &&
+        checkPointX <= b.x + b.w &&
+        this.y + this.h >= b.y &&
+        this.y + this.h <= b.y + b.h
+      ) {
+        isGroundAhead = true;
+        break;
+      }
+    }
+
+    if (!isGroundAhead) {
+      this.x = oldX;
+      this.vx *= -1;
     }
 
     if (this.x <= 10) {
@@ -527,7 +549,7 @@ function setup() {
 
 // p5.js Draw Loop
 function draw() {
-  background(125, 211, 252);
+  image(bgImg, 0, 0, width, height);
 
   if (gameState === STATE_START) {
     drawStartScreen();
