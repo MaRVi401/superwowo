@@ -154,8 +154,8 @@ class Player {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.w = 60;
-    this.h = 90;
+    this.w = 100;
+    this.h = 200;
     this.vx = 0;
     this.vy = 0;
     this.speed = 4.5;
