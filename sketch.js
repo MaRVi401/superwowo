@@ -73,21 +73,6 @@ class SoundSynth {
     osc.stop(this.ctx.currentTime + 0.12);
   }
 
-  playBlockHit() {
-    if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "square";
-    osc.frequency.setValueAtTime(200, this.ctx.currentTime);
-    osc.frequency.setValueAtTime(300, this.ctx.currentTime + 0.05);
-    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start();
-    osc.stop(this.ctx.currentTime + 0.1);
-  }
-
   playGameOver() {
     if (!this.ctx) return;
     const notes = [400, 350, 300, 250, 200, 150];
@@ -150,7 +135,6 @@ const GROUND_Y = 370;
 // Entities
 let player;
 let platforms = [];
-let blocks = [];
 let coins = [];
 let enemies = [];
 let particles = [];
@@ -168,8 +152,8 @@ class Player {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.w = 36; // Lebar gambar (sesuaikan jika perlu)
-    this.h = 48; // Tinggi gambar (sesuaikan jika perlu)
+    this.w = 36;
+    this.h = 48;
     this.vx = 0;
     this.vy = 0;
     this.speed = 4.5;
@@ -226,8 +210,7 @@ class Player {
   }
 
   handleHorizontalCollisions() {
-    const solids = [...platforms, ...blocks];
-    for (let b of solids) {
+    for (let b of platforms) {
       if (rectOverlap(this.x, this.y, this.w, this.h, b.x, b.y, b.w, b.h)) {
         if (this.vx > 0) {
           this.x = b.x - this.w;
@@ -239,8 +222,7 @@ class Player {
   }
 
   handleVerticalCollisions() {
-    const solids = [...platforms, ...blocks];
-    for (let b of solids) {
+    for (let b of platforms) {
       if (rectOverlap(this.x, this.y, this.w, this.h, b.x, b.y, b.w, b.h)) {
         if (this.vy > 0) {
           this.y = b.y - this.h;
@@ -249,120 +231,25 @@ class Player {
         } else if (this.vy < 0) {
           this.y = b.y + b.h;
           this.vy = 0;
-          if (b instanceof Block) {
-            b.hit();
-          }
         }
       }
     }
   }
 
-  // 2. Render Gambar PNG
   draw() {
     push();
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
-    // Balikkan gambar secara horizontal saat menghadap kiri
     if (this.facing === "left") scale(-1, 1);
 
-    // Efek kedip saat terkena damage / invulnerable
     if (this.invulnerableTimer % 6 > 3) {
       pop();
       return;
     }
 
-    // Tampilkan gambar PNG
     imageMode(CENTER);
     image(playerImg, 0, 0, this.w, this.h);
 
-    pop();
-  }
-}
-
-// Block Class
-class Block {
-  constructor(x, y, w = 32, h = 32, type = "question", content = "coin") {
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
-    this.type = type;
-    this.content = content;
-    this.isHit = false;
-    this.bounceY = 0;
-  }
-
-  hit() {
-    if (this.isHit && this.type === "question") return;
-
-    this.bounceY = -8;
-    audio.playBlockHit();
-
-    if (this.type === "question" && !this.isHit) {
-      this.isHit = true;
-      if (this.content === "coin") {
-        coinsCollected++;
-        score += 200;
-        audio.playCoin();
-        createParticles(this.x + this.w / 2, this.y - 10, "#facc15", 8);
-      }
-    } else if (this.type === "brick") {
-      score += 50;
-      createParticles(this.x + this.w / 2, this.y + this.h / 2, "#b45309", 10);
-    }
-  }
-
-  update() {
-    if (this.bounceY < 0) {
-      this.bounceY += 1;
-    }
-  }
-
-  draw() {
-    this.update();
-    push();
-    translate(this.x, this.y + this.bounceY);
-
-    if (this.type === "question") {
-      if (!this.isHit) {
-        fill(245, 158, 11);
-        stroke(180, 83, 9);
-        strokeWeight(2);
-        rect(0, 0, this.w, this.h, 4);
-
-        noStroke();
-        fill(255);
-        textFont("Press Start 2P");
-        textSize(14);
-        textAlign(CENTER, CENTER);
-        text("?", this.w / 2, this.h / 2 + 1);
-
-        fill(180, 83, 9);
-        rect(3, 3, 3, 3);
-        rect(this.w - 6, 3, 3, 3);
-        rect(3, this.h - 6, 3, 3);
-        rect(this.w - 6, this.h - 6, 3, 3);
-      } else {
-        fill(180, 83, 9);
-        stroke(120, 53, 15);
-        strokeWeight(2);
-        rect(0, 0, this.w, this.h, 4);
-        fill(120, 53, 15);
-        rect(4, 4, this.w - 8, this.h - 8);
-      }
-    } else {
-      fill(180, 83, 9);
-      stroke(120, 53, 15);
-      strokeWeight(2);
-      rect(0, 0, this.w, this.h, 2);
-      stroke(120, 53, 15);
-      line(0, 10, this.w, 10);
-      line(0, 22, this.w, 22);
-      line(16, 0, 16, 10);
-      line(8, 10, 8, 22);
-      line(24, 10, 24, 22);
-      line(16, 22, 16, this.h);
-    }
     pop();
   }
 }
@@ -372,8 +259,8 @@ class Coin {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.w = 24; // Sesuaikan lebar koin
-    this.h = 24; // Sesuaikan tinggi koin
+    this.w = 24;
+    this.h = 24;
     this.animAngle = Math.random() * Math.PI;
     this.collected = false;
   }
@@ -389,11 +276,9 @@ class Coin {
     push();
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
-    // Efek pipih/berputar saat beranimasi
     const scaleX = Math.sin(this.animAngle);
     scale(scaleX, 1);
 
-    // Render Gambar PNG Koin
     imageMode(CENTER);
     image(coinImg, 0, 0, this.w, this.h);
 
@@ -421,19 +306,24 @@ class Enemy {
       return;
     }
 
+    const oldX = this.x;
     this.x += this.vx;
     this.walkFrame += 0.15;
 
-    let collided = false;
-    const solids = [...platforms, ...blocks];
-    for (let b of solids) {
-      if (rectOverlap(this.x, this.y, this.w, this.h, b.x, b.y, b.w, b.h)) {
-        collided = true;
+    for (const b of platforms) {
+      if (rectOverlap(this.x, this.y, this.w, this.h - 4, b.x, b.y, b.w, b.h)) {
+        this.x = oldX;
+        this.vx *= -1;
         break;
       }
     }
-    if (collided || this.x < 10 || this.x > LEVEL_WIDTH - 40) {
-      this.vx *= -1;
+
+    if (this.x <= 10) {
+      this.x = 10;
+      this.vx = Math.abs(this.vx);
+    } else if (this.x >= LEVEL_WIDTH - this.w) {
+      this.x = LEVEL_WIDTH - this.w;
+      this.vx = -Math.abs(this.vx);
     }
   }
 
@@ -442,7 +332,6 @@ class Enemy {
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
     if (this.isSquished) {
-      // Efek gepeng saat musuh diinjak
       scale(1.2, 0.3);
       imageMode(CENTER);
       image(enemyImg, 0, 0, this.w, this.h);
@@ -450,10 +339,8 @@ class Enemy {
       return;
     }
 
-    // Membalik arah gambar saat jalan ke kanan/kiri
     if (this.vx > 0) scale(-1, 1);
 
-    // Tampilkan Gambar PNG Musuh
     imageMode(CENTER);
     image(enemyImg, 0, 0, this.w, this.h);
 
@@ -534,7 +421,6 @@ function rectOverlap(x1, y1, w1, h1, x2, y2, w2, h2) {
 
 function initLevel() {
   platforms = [];
-  blocks = [];
   coins = [];
   enemies = [];
   particles = [];
@@ -556,38 +442,19 @@ function initLevel() {
     });
   }
 
-  platforms.push({ x: 350, y: 260, w: 120, h: 20, type: "wood" });
-  platforms.push({ x: 1050, y: 250, w: 160, h: 20, type: "wood" });
-  platforms.push({ x: 1800, y: 230, w: 140, h: 20, type: "wood" });
-  platforms.push({ x: 2700, y: 260, w: 180, h: 20, type: "wood" });
-
-  blocks.push(new Block(220, 250, 32, 32, "question", "coin"));
-  blocks.push(new Block(252, 250, 32, 32, "brick"));
-  blocks.push(new Block(284, 250, 32, 32, "question", "coin"));
-  blocks.push(new Block(316, 250, 32, 32, "brick"));
-
-  blocks.push(new Block(600, 240, 32, 32, "question", "coin"));
-  blocks.push(new Block(632, 170, 32, 32, "question", "coin"));
-
-  blocks.push(new Block(1200, 220, 32, 32, "brick"));
-  blocks.push(new Block(1232, 220, 32, 32, "question", "coin"));
-  blocks.push(new Block(1264, 220, 32, 32, "brick"));
-
-  blocks.push(new Block(2000, 240, 32, 32, "question", "coin"));
-  blocks.push(new Block(2032, 240, 32, 32, "question", "coin"));
-
+  // Posisi koin di sepanjang level
   const coinPositions = [
     [150, 320],
     [180, 320],
-    [370, 220],
-    [410, 220],
+    [370, 320],
+    [410, 320],
     [880, 320],
     [920, 320],
-    [1100, 200],
-    [1130, 200],
+    [1100, 320],
+    [1130, 320],
     [1680, 320],
     [1720, 320],
-    [1850, 180],
+    [1850, 320],
     [2200, 320],
     [2240, 320],
   ];
@@ -595,12 +462,13 @@ function initLevel() {
     coins.push(new Coin(pos[0], pos[1]));
   }
 
-  enemies.push(new Enemy(450, GROUND_Y - 28));
-  enemies.push(new Enemy(950, GROUND_Y - 28));
-  enemies.push(new Enemy(1300, GROUND_Y - 28));
-  enemies.push(new Enemy(1750, GROUND_Y - 28));
-  enemies.push(new Enemy(2150, GROUND_Y - 28));
-  enemies.push(new Enemy(2800, GROUND_Y - 28));
+  // Posisi musuh
+  enemies.push(new Enemy(450, GROUND_Y - 32));
+  enemies.push(new Enemy(950, GROUND_Y - 32));
+  enemies.push(new Enemy(1300, GROUND_Y - 32));
+  enemies.push(new Enemy(1750, GROUND_Y - 32));
+  enemies.push(new Enemy(2150, GROUND_Y - 32));
+  enemies.push(new Enemy(2800, GROUND_Y - 32));
 
   flagPole = new FlagPole(3300, GROUND_Y - 240);
 
@@ -680,7 +548,6 @@ function draw() {
   drawParallaxBackground();
   drawPlatforms();
 
-  for (let b of blocks) b.draw();
   for (let c of coins) c.draw();
   for (let e of enemies) e.draw();
 
@@ -795,11 +662,6 @@ function drawPlatforms() {
         rect(rx, p.y + 26, 12, 12, 2);
         rect(rx + 20, p.y + 48, 12, 12, 2);
       }
-    } else {
-      fill(217, 119, 6);
-      stroke(146, 64, 14);
-      strokeWeight(2);
-      rect(p.x, p.y, p.w, p.h, 4);
     }
   }
 }
@@ -818,12 +680,12 @@ function drawHUD() {
   fill(250, 204, 21);
   text(`${String(score).padStart(6, "0")}`, 30, 40);
 
-  fill(250, 204, 21);
-  ellipse(230, 32, 12, 16);
+  imageMode(CENTER);
+  image(coinImg, 230, 32, 16, 16);
   fill(255);
   text(`x ${String(coinsCollected).padStart(2, "0")}`, 245, 33);
 
-  fill(225, 29, 72);
+  fill(225);
   text(`LIVES:`, 420, 33);
   fill(255);
   text(`x ${lives}`, 490, 33);
@@ -835,8 +697,6 @@ function drawHUD() {
   rect(600, 26, 150 * progress, 12, 6);
   fill(255);
   textSize(9);
-  text(`GOAL`, 712, 18);
-
   pop();
 }
 
@@ -855,13 +715,13 @@ function drawStartScreen() {
   fill(203, 213, 225);
   textSize(10);
   text(
-    "- Gunakan A/D atau Panah Kiri/Kanan untuk Bergerak",
+    "Gunakan A/D atau Panah Kiri/Kanan untuk Bergerak",
     CANVAS_WIDTH / 2,
     230,
   );
-  text("- Tekan W / Panah Atas / Spasi untuk Melompat", CANVAS_WIDTH / 2, 250);
-  text("- Injak Musuh untuk mengalahkan mereka (+200)", CANVAS_WIDTH / 2, 270);
-  text("- Sundul Balok '?' untuk mengumpulkan Koin!", CANVAS_WIDTH / 2, 290);
+  text("Tekan W / Panah Atas / Spasi untuk Melompat", CANVAS_WIDTH / 2, 250);
+  text("Injak Musuh untuk mengalahkan mereka (+200)", CANVAS_WIDTH / 2, 270);
+  text("Kumpulkan Koin dan capai Bendera Finish!", CANVAS_WIDTH / 2, 290);
 
   fill(239, 68, 68);
   textSize(12);
@@ -939,6 +799,8 @@ function setupTouchEvents() {
   const btnLeft = document.getElementById("btn-left");
   const btnRight = document.getElementById("btn-right");
   const btnJump = document.getElementById("btn-jump");
+
+  if (!btnLeft || !btnRight || !btnJump) return;
 
   btnLeft.addEventListener("touchstart", (e) => {
     e.preventDefault();
