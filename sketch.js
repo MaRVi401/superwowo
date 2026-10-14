@@ -6,7 +6,6 @@ let coinImg;
 let enemyImg;
 let bgImg;
 
-// Dimensi dasar rasio game (16:9)
 const BASE_WIDTH = 800;
 const BASE_HEIGHT = 450;
 let scaleFactor = 1;
@@ -555,7 +554,6 @@ function windowResized() {
 
 function draw() {
   push();
-  // Menerapkan Skala Responsif Otomatis
   scale(scaleFactor);
 
   image(bgImg, 0, 0, BASE_WIDTH, BASE_HEIGHT);
@@ -838,7 +836,6 @@ function setupTouchEvents() {
 
   if (!btnLeft || !btnRight || !btnJump) return;
 
-  // Touch Event Handlers
   btnLeft.addEventListener("touchstart", (e) => { e.preventDefault(); touchLeft = true; });
   btnLeft.addEventListener("touchend", (e) => { e.preventDefault(); touchLeft = false; });
   btnLeft.addEventListener("mousedown", () => (touchLeft = true));

@@ -98,11 +98,25 @@
       transform: scale(0.95);
     }
 
-    /* Sembunyikan kontrol sentuh secara default pada desktop */
+    /* Sembunyikan kontrol sentuh secara default pada layar PC/Laptop */
     @media (min-width: 1024px) and (hover: hover) {
       .touch-controls {
         display: none;
       }
+    }
+
+    /* ==========================================================
+       ATURAN KHUSUS: MENYEMBUNYIKAN BADGE / DRAWER NETLIFY
+       ========================================================== */
+    #netlify-modal-backdrop,
+    .netlify-drawer,
+    [data-netlify-deploy-id],
+    iframe[src*="netlify"],
+    div[class*="netlify"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
   </style>
 </head>
@@ -111,7 +125,7 @@
   <div id="game-wrapper">
     <div id="canvas-container"></div>
 
-    <!-- UI Tombol Layar Sentuh untuk Perangkat Seluler -->
+    <!-- UI Tombol Layar Sentuh untuk HP -->
     <div class="touch-controls">
       <div class="touch-group">
         <div id="btn-left" class="btn-touch">◀</div>
@@ -123,7 +137,7 @@
     </div>
   </div>
 
-  <!-- Memuat Script Game -->
+  <!-- Memuat Script Game Utama -->
   <script src="sketch.js"></script>
 </body>
 </html>
