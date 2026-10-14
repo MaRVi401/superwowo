@@ -6,7 +6,11 @@ let coinImg;
 let enemyImg;
 let bgImg;
 
-// Preload memuat aset gambar sebelum game dimulai
+// Dimensi dasar rasio game (16:9)
+const BASE_WIDTH = 800;
+const BASE_HEIGHT = 450;
+let scaleFactor = 1;
+
 function preload() {
   playerImg = loadImage("wowo.png");
   coinImg = loadImage("mbg.png");
@@ -17,13 +21,11 @@ function preload() {
 // ==========================================
 // 2. AUDIO SYNTHESIZER (WEB AUDIO API)
 // ==========================================
-// Generasi efek suara retro secara real-time tanpa file audio
 class SoundSynth {
   constructor() {
     this.ctx = null;
   }
 
-  // Inisialisasi AudioContext browser
   init() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -34,7 +36,6 @@ class SoundSynth {
     }
   }
 
-  // Suara Lompat (Square Wave)
   playJump() {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -50,14 +51,13 @@ class SoundSynth {
     osc.stop(this.ctx.currentTime + 0.15);
   }
 
-  // Suara Koin (Sine Wave, 2 Nada)
   playCoin() {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime); // Nada B5
-    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08); // Nada E6
+    osc.frequency.setValueAtTime(987.77, this.ctx.currentTime);
+    osc.frequency.setValueAtTime(1318.51, this.ctx.currentTime + 0.08);
     gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
     osc.connect(gain);
@@ -66,7 +66,6 @@ class SoundSynth {
     osc.stop(this.ctx.currentTime + 0.3);
   }
 
-  // Suara Menginjak Musuh (Triangle Wave)
   playStomp() {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -82,7 +81,6 @@ class SoundSynth {
     osc.stop(this.ctx.currentTime + 0.12);
   }
 
-  // Suara Game Over (Sawtooth Wave, Melodi Turun)
   playGameOver() {
     if (!this.ctx) return;
     const notes = [400, 350, 300, 250, 200, 150];
@@ -100,10 +98,9 @@ class SoundSynth {
     });
   }
 
-  // Suara Menang / Win (Triangle Wave, Melodi Naik)
   playWin() {
     if (!this.ctx) return;
-    const notes = [261.63, 329.63, 392.0, 523.25, 659.25, 783.99]; // Tangga nada C-E-G-C-E-G
+    const notes = [261.63, 329.63, 392.0, 523.25, 659.25, 783.99];
     notes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
@@ -136,11 +133,8 @@ let lives = 3;
 let cameraX = 0;
 
 const LEVEL_WIDTH = 3600;
-const CANVAS_WIDTH = 800;
-const CANVAS_HEIGHT = 450;
 const GROUND_Y = 370;
 
-// Variabel Objek & Entitas Game
 let player;
 let platforms = [];
 let coins = [];
@@ -150,13 +144,12 @@ let flagPole;
 let clouds = [];
 let hills = [];
 
-// Status Kontrol Layar Sentuh
 let touchLeft = false;
 let touchRight = false;
 let touchJump = false;
 
 // ==========================================
-// 4. KELAS KARAKTER PEMAIN (PLAYER)
+// 4. KELAS ENTITAS GAME
 // ==========================================
 class Player {
   constructor(x, y) {
@@ -172,11 +165,10 @@ class Player {
     this.isGrounded = false;
     this.facing = "right";
     this.walkFrame = 0;
-    this.invulnerableTimer = 0; // Durasi kebal sementara setelah terkena damage
+    this.invulnerableTimer = 0;
   }
 
   update() {
-    // Pengendalian Kecepatan Horizontal
     this.vx = 0;
     if (keyIsDown(65) || keyIsDown(LEFT_ARROW) || touchLeft) {
       this.vx = -this.speed;
@@ -187,35 +179,28 @@ class Player {
       this.facing = "right";
     }
 
-    // Penerapan Gravitasi
     this.vy += this.gravity;
 
-    // Pergerakan Sumbu X dan Deteksi Tabrakan Samping
     this.x += this.vx;
     this.handleHorizontalCollisions();
 
-    // Pergerakan Sumbu Y dan Deteksi Tabrakan Atas/Bawah
     this.y += this.vy;
     this.isGrounded = false;
     this.handleVerticalCollisions();
 
-    // Batas Area Level
     if (this.x < 0) this.x = 0;
     if (this.x + this.w > LEVEL_WIDTH) this.x = LEVEL_WIDTH - this.w;
 
-    // Deteksi Jatuh ke Jurang
-    if (this.y > CANVAS_HEIGHT + 100) {
+    if (this.y > BASE_HEIGHT + 100) {
       handlePlayerDeath("Jatuh ke jurang!");
     }
 
-    // Animasi Langkah
     if (Math.abs(this.vx) > 0.1 && this.isGrounded) {
       this.walkFrame += 0.2;
     } else {
       this.walkFrame = 0;
     }
 
-    // Pengurangan Durasi Kebal
     if (this.invulnerableTimer > 0) this.invulnerableTimer--;
   }
 
@@ -258,10 +243,8 @@ class Player {
     push();
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
-    // Membalik Gambar Sesuai Arah Hadap
     if (this.facing === "left") scale(-1, 1);
 
-    // Efek Kedip Saat Kondisi Kebal/Invulnerable
     if (this.invulnerableTimer % 6 > 3) {
       pop();
       return;
@@ -273,9 +256,6 @@ class Player {
   }
 }
 
-// ==========================================
-// 5. KELAS KOIN BERANIMASI (COIN)
-// ==========================================
 class Coin {
   constructor(x, y) {
     this.x = x;
@@ -297,7 +277,6 @@ class Coin {
     push();
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
-    // Animasi Pipih Vertikal (Efek Putaran 3D)
     const scaleX = Math.sin(this.animAngle);
     scale(scaleX, 1);
 
@@ -307,9 +286,6 @@ class Coin {
   }
 }
 
-// ==========================================
-// 6. KELAS MUSUH (ENEMY)
-// ==========================================
 class Enemy {
   constructor(x, y) {
     this.x = x;
@@ -324,7 +300,6 @@ class Enemy {
   }
 
   update() {
-    // Jika Terinjak, Tahan Posisi Sebelum Hilang
     if (this.isSquished) {
       this.squishTimer++;
       return;
@@ -334,7 +309,6 @@ class Enemy {
     this.x += this.vx;
     this.walkFrame += 0.15;
 
-    // Berbalik Arah Jika Menabrak Platform
     for (const b of platforms) {
       if (rectOverlap(this.x, this.y, this.w, this.h - 4, b.x, b.y, b.w, b.h)) {
         this.x = oldX;
@@ -343,7 +317,6 @@ class Enemy {
       }
     }
 
-    // Patroli Pintar: Berbalik Arah Jika Mendeteksi Jurang di Depan
     let checkPointX = this.vx > 0 ? this.x + this.w : this.x;
     let isGroundAhead = false;
 
@@ -364,7 +337,6 @@ class Enemy {
       this.vx *= -1;
     }
 
-    // Batas Tepi Level
     if (this.x <= 10) {
       this.x = 10;
       this.vx = Math.abs(this.vx);
@@ -378,7 +350,6 @@ class Enemy {
     push();
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
-    // Gambar Musuh Gepeng Saat Terinjak
     if (this.isSquished) {
       scale(1.2, 0.3);
       imageMode(CENTER);
@@ -395,9 +366,6 @@ class Enemy {
   }
 }
 
-// ==========================================
-// 7. KELAS TIANG BENDERA FINISH (FLAGPOLE)
-// ==========================================
 class FlagPole {
   constructor(x, y) {
     this.x = x;
@@ -408,19 +376,15 @@ class FlagPole {
 
   draw() {
     push();
-    // Pondasi Tiang
     fill(100, 116, 139);
     rect(this.x - 10, this.y + this.h - 20, 40, 20, 4);
 
-    // Batang Tiang
     fill(226, 232, 240);
     rect(this.x, this.y, 8, this.h, 2);
 
-    // Bola Atas Tiang
     fill(250, 204, 21);
     ellipse(this.x + 4, this.y, 20, 20);
 
-    // Bendera Hijau
     fill(34, 197, 94);
     triangle(
       this.x + 8,
@@ -434,9 +398,6 @@ class FlagPole {
   }
 }
 
-// ==========================================
-// 8. EFEK PARTIKEL (PARTICLE SYSTEM)
-// ==========================================
 class Particle {
   constructor(x, y, color) {
     this.x = x;
@@ -451,8 +412,8 @@ class Particle {
   update() {
     this.x += this.vx;
     this.y += this.vy;
-    this.vy += 0.3; // Gravitasi partikel
-    this.alpha -= 8; // Memudar bertahap
+    this.vy += 0.3;
+    this.alpha -= 8;
   }
 
   draw() {
@@ -464,28 +425,39 @@ class Particle {
   }
 }
 
-// Fungsi Helper Pemicu Efek Partikel
 function createParticles(x, y, colorStr, count = 6) {
   for (let i = 0; i < count; i++) {
     particles.push(new Particle(x, y, colorStr));
   }
 }
 
-// Fungsi Deteksi Overlap Bounding-Box (AABB Collision)
 function rectOverlap(x1, y1, w1, h1, x2, y2, w2, h2) {
   return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 }
 
 // ==========================================
-// 9. INISIALISASI LEVEL & MANAJEMEN NYAWA
+// 5. INISIALISASI LEVEL & RESIZE RESPONSIF
 // ==========================================
+function calculateCanvasSize() {
+  let w = windowWidth;
+  let h = windowHeight;
+
+  if (w / h > BASE_WIDTH / BASE_HEIGHT) {
+    w = h * (BASE_WIDTH / BASE_HEIGHT);
+  } else {
+    h = w * (BASE_HEIGHT / BASE_WIDTH);
+  }
+
+  scaleFactor = w / BASE_WIDTH;
+  return { w: floor(w), h: floor(h) };
+}
+
 function initLevel() {
   platforms = [];
   coins = [];
   enemies = [];
   particles = [];
 
-  // Platform Tanah dengan Jurang
   const groundSegments = [
     { start: 0, end: 700 },
     { start: 800, end: 1500 },
@@ -503,7 +475,6 @@ function initLevel() {
     });
   }
 
-  // Penempatan Koin
   const coinPositions = [
     [150, 320], [180, 320], [370, 320], [410, 320],
     [880, 320], [920, 320], [1100, 320], [1130, 320],
@@ -513,7 +484,6 @@ function initLevel() {
     coins.push(new Coin(pos[0], pos[1]));
   }
 
-  // Penempatan Musuh
   enemies.push(new Enemy(450, GROUND_Y - 48));
   enemies.push(new Enemy(950, GROUND_Y - 48));
   enemies.push(new Enemy(1300, GROUND_Y - 48));
@@ -521,10 +491,8 @@ function initLevel() {
   enemies.push(new Enemy(2150, GROUND_Y - 48));
   enemies.push(new Enemy(2800, GROUND_Y - 48));
 
-  // Tiang Finish
   flagPole = new FlagPole(3300, GROUND_Y - 240);
 
-  // Latar Awan Acak
   clouds = [];
   for (let i = 0; i < 20; i++) {
     clouds.push({
@@ -534,7 +502,6 @@ function initLevel() {
     });
   }
 
-  // Latar Bukit Acak
   hills = [];
   for (let i = 0; i < 15; i++) {
     hills.push({
@@ -544,7 +511,6 @@ function initLevel() {
     });
   }
 
-  // Inisialisasi Karakter Pemain
   player = new Player(80, GROUND_Y - 50);
 }
 
@@ -561,7 +527,6 @@ function handlePlayerDeath(reason) {
   if (lives <= 0) {
     gameState = STATE_GAMEOVER;
   } else {
-    // Respawn Karakter di Dekat Posisi Kamera Aktif
     player.x = Math.max(80, cameraX + 50);
     player.y = 100;
     player.vy = 0;
@@ -570,11 +535,11 @@ function handlePlayerDeath(reason) {
 }
 
 // ==========================================
-// 10. SETUP DAN DRAW LOOP (P5.JS)
+// 6. SETUP & DRAW LOOP RESPONSIF
 // ==========================================
 function setup() {
-  const container = document.getElementById("canvas-container");
-  const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
+  const size = calculateCanvasSize();
+  const canvas = createCanvas(size.w, size.h);
   canvas.parent("canvas-container");
   textFont("Press Start 2P");
 
@@ -583,11 +548,21 @@ function setup() {
   gameState = STATE_START;
 }
 
+function windowResized() {
+  const size = calculateCanvasSize();
+  resizeCanvas(size.w, size.h);
+}
+
 function draw() {
-  image(bgImg, 0, 0, width, height);
+  push();
+  // Menerapkan Skala Responsif Otomatis
+  scale(scaleFactor);
+
+  image(bgImg, 0, 0, BASE_WIDTH, BASE_HEIGHT);
 
   if (gameState === STATE_START) {
     drawStartScreen();
+    pop();
     return;
   }
 
@@ -596,14 +571,12 @@ function draw() {
   }
 
   push();
-  // Kamera Halus Berjalan Mengikuti Pemain (Lerp Smooth Camera)
-  const targetCamX = player.x - CANVAS_WIDTH / 3;
+  const targetCamX = player.x - BASE_WIDTH / 3;
   cameraX = lerp(cameraX, targetCamX, 0.1);
-  cameraX = constrain(cameraX, 0, LEVEL_WIDTH - CANVAS_WIDTH);
+  cameraX = constrain(cameraX, 0, LEVEL_WIDTH - BASE_WIDTH);
 
   translate(-cameraX, 0);
 
-  // Render Objek dalam Dunia Game
   drawParallaxBackground();
   drawPlatforms();
 
@@ -613,7 +586,6 @@ function draw() {
   flagPole.draw();
   player.draw();
 
-  // Render & Update Partikel
   for (let i = particles.length - 1; i >= 0; i--) {
     particles[i].update();
     particles[i].draw();
@@ -622,25 +594,24 @@ function draw() {
 
   pop();
 
-  // Render Antarmuka Atas (HUD)
   drawHUD();
 
-  // Layar Hamparan State Game
   if (gameState === STATE_GAMEOVER) {
     drawGameOverScreen();
   } else if (gameState === STATE_WIN) {
     drawWinScreen();
   }
+
+  pop();
 }
 
 // ==========================================
-// 11. LOGIKA INTERAKSI GAME (UPDATE LOGIC)
+// 7. LOGIKA PERMAINAN (UPDATE LOGIC)
 // ==========================================
 function updateGameLogic() {
   audio.init();
   player.update();
 
-  // Interaksi Pemain dengan Koin
   for (let c of coins) {
     if (
       !c.collected &&
@@ -654,7 +625,6 @@ function updateGameLogic() {
     }
   }
 
-  // Interaksi Pemain dengan Musuh
   for (let i = enemies.length - 1; i >= 0; i--) {
     let e = enemies[i];
     e.update();
@@ -668,10 +638,9 @@ function updateGameLogic() {
       !e.isSquished &&
       rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)
     ) {
-      // Deteksi Menginjak Musuh dari Atas
       if (player.vy > 0 && player.y + player.h - player.vy <= e.y + 12) {
         e.isSquished = true;
-        player.vy = -8; // Pantulan ke atas
+        player.vy = -8;
         score += 200;
         audio.playStomp();
         createParticles(e.x + e.w / 2, e.y, "#92400e", 8);
@@ -681,7 +650,6 @@ function updateGameLogic() {
     }
   }
 
-  // Interaksi dengan Tiang Finish
   if (
     rectOverlap(
       player.x,
@@ -700,7 +668,7 @@ function updateGameLogic() {
 }
 
 // ==========================================
-// 12. RENDER LINGKUNGAN DAN HUD
+// 8. RENDER GRAFIS & HUD
 // ==========================================
 function drawParallaxBackground() {
   fill(34, 197, 94);
@@ -729,7 +697,6 @@ function drawPlatforms() {
       fill(180, 83, 9);
       rect(p.x, p.y + 16, p.w, p.h - 16);
 
-      // Tekstur Bata Tanah
       fill(120, 53, 15);
       for (let rx = p.x + 10; rx < p.x + p.w - 10; rx += 40) {
         rect(rx, p.y + 26, 12, 12, 2);
@@ -743,106 +710,97 @@ function drawHUD() {
   push();
   fill(15, 23, 42, 180);
   noStroke();
-  rect(12, 12, CANVAS_WIDTH - 24, 42, 8);
+  rect(12, 12, BASE_WIDTH - 24, 42, 8);
 
   fill(255);
   textSize(11);
   textAlign(LEFT, CENTER);
 
-  // Informasi Skor
   text(`WOWO`, 30, 24);
   fill(250, 204, 21);
   text(`${String(score).padStart(6, "0")}`, 30, 40);
 
-  // Informasi Koin
   imageMode(CENTER);
   image(coinImg, 230, 32, 16, 16);
   fill(255);
   text(`x ${String(coinsCollected).padStart(2, "0")}`, 245, 33);
 
-  // Informasi Nyawa
   fill(225);
   text(`LIVES:`, 420, 33);
   fill(255);
   text(`x ${lives}`, 490, 33);
 
-  // Progress Bar Posisi Level
   const progress = constrain(player.x / LEVEL_WIDTH, 0, 1);
   fill(51, 65, 85);
   rect(600, 26, 150, 12, 6);
   fill(34, 197, 94);
   rect(600, 26, 150 * progress, 12, 6);
-  fill(255);
-  textSize(9);
   pop();
 }
 
-// ==========================================
-// 13. TAMPILAN LAYAR (SCREENS)
-// ==========================================
 function drawStartScreen() {
   fill(15, 23, 42, 220);
-  rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  rect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
   textAlign(CENTER, CENTER);
   fill(250, 204, 21);
-  textSize(26);
-  text("SUPER WOWO 2D", CANVAS_WIDTH / 2, 130);
+  textSize(24);
+  text("SUPER WOWO 2D", BASE_WIDTH / 2, 120);
 
   fill(255);
   textSize(12);
-  text("PETUNJUK PERMAINAN:", CANVAS_WIDTH / 2, 200);
+  text("PETUNJUK PERMAINAN:", BASE_WIDTH / 2, 190);
   fill(203, 213, 225);
   textSize(10);
-  text("Gunakan A/D atau Panah Kiri/Kanan untuk Bergerak", CANVAS_WIDTH / 2, 230);
-  text("Tekan W / Panah Atas / Spasi untuk Melompat", CANVAS_WIDTH / 2, 250);
-  text("Injak Musuh untuk mengalahkan mereka (+200)", CANVAS_WIDTH / 2, 270);
-  text("Kumpulkan Koin dan capai Bendera Finish!", CANVAS_WIDTH / 2, 290);
+  text("Gunakan A/D atau Panah Kiri/Kanan untuk Bergerak", BASE_WIDTH / 2, 220);
+  text("Tekan W / Panah Atas / Spasi untuk Melompat", BASE_WIDTH / 2, 240);
+  text("Injak Musuh untuk mengalahkan mereka (+200)", BASE_WIDTH / 2, 260);
+  text("Kumpulkan Koin dan capai Bendera Finish!", BASE_WIDTH / 2, 280);
 
   fill(239, 68, 68);
   textSize(12);
-  text("KLIK / TEKAN SPASI UNTUK MEMULAI", CANVAS_WIDTH / 2, 350);
+  text("KLIK / TEKAN SPASI UNTUK MEMULAI", BASE_WIDTH / 2, 340);
 }
 
 function drawGameOverScreen() {
   fill(15, 23, 42, 210);
-  rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  rect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
   textAlign(CENTER, CENTER);
   fill(239, 68, 68);
   textSize(32);
-  text("GAME OVER", CANVAS_WIDTH / 2, 160);
+  text("GAME OVER", BASE_WIDTH / 2, 160);
 
   fill(255);
   textSize(12);
-  text(`SKOR AKHIR: ${score}`, CANVAS_WIDTH / 2, 230);
+  text(`SKOR AKHIR: ${score}`, BASE_WIDTH / 2, 230);
 
   fill(250, 204, 21);
   textSize(11);
-  text("TEKAN 'R' ATAU SPASI UNTUK MAIN LAGI", CANVAS_WIDTH / 2, 310);
+  text("TEKAN 'R' ATAU SPASI UNTUK MAIN LAGI", BASE_WIDTH / 2, 310);
 }
 
 function drawWinScreen() {
   fill(15, 23, 42, 210);
-  rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  rect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
   textAlign(CENTER, CENTER);
   fill(34, 197, 94);
   textSize(28);
-  text("LEVEL SELESAI!", CANVAS_WIDTH / 2, 150);
+  text("LEVEL SELESAI!", BASE_WIDTH / 2, 150);
 
   fill(255);
   textSize(12);
-  text(`SKOR TOTAL: ${score}`, CANVAS_WIDTH / 2, 210);
-  text(`TOTAL KOIN: ${coinsCollected}`, CANVAS_WIDTH / 2, 240);
+  text(`SKOR TOTAL: ${score}`, BASE_WIDTH / 2, 210);
+  text(`TOTAL KOIN: ${coinsCollected}`, BASE_WIDTH / 2, 240);
 
   fill(250, 204, 21);
   textSize(11);
-  text("TEKAN 'R' ATAU SPASI UNTUK MAIN LAGI", CANVAS_WIDTH / 2, 320);
+  text("TEKAN 'R' ATAU SPASI UNTUK MAIN LAGI", BASE_WIDTH / 2, 320);
 }
 
 // ==========================================
-// 14. PENANGANAN INPUT (KEYBOARD & TOUCH)
+// 9. EVENT LISTENERS (KEYBOARD & TOUCH)
 // ==========================================
 function keyPressed() {
   audio.init();
@@ -873,7 +831,6 @@ function mousePressed() {
   }
 }
 
-// Event Listener untuk Tombol Layar Sentuh / Mobile
 function setupTouchEvents() {
   const btnLeft = document.getElementById("btn-left");
   const btnRight = document.getElementById("btn-right");
@@ -881,25 +838,14 @@ function setupTouchEvents() {
 
   if (!btnLeft || !btnRight || !btnJump) return;
 
-  btnLeft.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    touchLeft = true;
-  });
-  btnLeft.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    touchLeft = false;
-  });
+  // Touch Event Handlers
+  btnLeft.addEventListener("touchstart", (e) => { e.preventDefault(); touchLeft = true; });
+  btnLeft.addEventListener("touchend", (e) => { e.preventDefault(); touchLeft = false; });
   btnLeft.addEventListener("mousedown", () => (touchLeft = true));
   btnLeft.addEventListener("mouseup", () => (touchLeft = false));
 
-  btnRight.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    touchRight = true;
-  });
-  btnRight.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    touchRight = false;
-  });
+  btnRight.addEventListener("touchstart", (e) => { e.preventDefault(); touchRight = true; });
+  btnRight.addEventListener("touchend", (e) => { e.preventDefault(); touchRight = false; });
   btnRight.addEventListener("mousedown", () => (touchRight = true));
   btnRight.addEventListener("mouseup", () => (touchRight = false));
 
