@@ -60,14 +60,14 @@
     /* Tombol Kontrol Layar Sentuh (Mobile/Touch Controls) */
     .touch-controls {
       position: absolute;
-      bottom: 15px;
+      bottom: 120px; /* Posisi dinaikkan jauh lebih tinggi ke atas */
       left: 0;
       width: 100%;
-      padding: 0 20px;
+      padding: 0 35px;
       display: flex;
       justify-content: space-between;
       pointer-events: none;
-      z-index: 100;
+      z-index: 1000;
     }
 
     .touch-group {
@@ -77,25 +77,25 @@
     }
 
     .btn-touch {
-      width: 60px;
-      height: 60px;
-      background: rgba(30, 41, 59, 0.75);
-      border: 2px solid rgba(255, 255, 255, 0.4);
+      width: 65px;
+      height: 65px;
+      background: rgba(30, 41, 59, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.5);
       border-radius: 50%;
       color: #ffffff;
-      font-size: 20px;
+      font-size: 22px;
       font-weight: bold;
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
       backdrop-filter: blur(4px);
-      transition: background 0.1s;
+      transition: background 0.1s, transform 0.1s;
     }
 
     .btn-touch:active {
-      background: rgba(51, 65, 85, 0.9);
-      transform: scale(0.95);
+      background: rgba(51, 65, 85, 0.95);
+      transform: scale(0.92);
     }
 
     /* Sembunyikan kontrol sentuh secara default pada layar PC/Laptop */
@@ -105,9 +105,7 @@
       }
     }
 
-    /* ==========================================================
-       ATURAN KHUSUS: MENYEMBUNYIKAN BADGE / DRAWER NETLIFY
-       ========================================================== */
+    /* Menyembunyikan Netlify Drawer / Badge */
     #netlify-modal-backdrop,
     .netlify-drawer,
     [data-netlify-deploy-id],
