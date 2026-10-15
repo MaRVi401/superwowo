@@ -1,30 +1,35 @@
-// ==========================================
-// 1. DEKLARASI VARIABEL GLOBAL & PRELOAD
-// ==========================================
+// ============================================================================
+// #1_PRELOAD_DAN_ASSET_LOADING
+// Pengambilan aset gambar sebelum game dijalankan.
+// ============================================================================
 let playerImg;
 let coinImg;
 let enemyImg;
 let bgImg;
 
+// #CANVAS_SCALE: Nilai acuan resolusi asli untuk penskalaan responsif
 const BASE_WIDTH = 800;
 const BASE_HEIGHT = 450;
 let scaleFactor = 1;
 
 function preload() {
+  // #PRELOAD_IMAGES: Memuat gambar karakter, koin, musuh, dan latar
   playerImg = loadImage("wowo.png");
   coinImg = loadImage("mbg.png");
   enemyImg = loadImage("enemy.png");
   bgImg = loadImage("bg.png");
 }
 
-// ==========================================
-// 2. AUDIO SYNTHESIZER (WEB AUDIO API)
-// ==========================================
+// ============================================================================
+// #2_AUDIO_SYNTHESIZER
+// Sistem efek suara tanpa file eksternal (menggunakan Web Audio API).
+// ============================================================================
 class SoundSynth {
   constructor() {
     this.ctx = null;
   }
 
+  // #AUDIO_INIT: Inisialisasi AudioContext setelah ada interaksi pengguna
   init() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -35,6 +40,7 @@ class SoundSynth {
     }
   }
 
+  // #SFX_JUMP: Frekuensi naik cepat (Pitch ramp up) menggunakan gelombang kotak
   playJump() {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -50,6 +56,7 @@ class SoundSynth {
     osc.stop(this.ctx.currentTime + 0.15);
   }
 
+  // #SFX_COIN: Dua nada frekuensi tinggi berurutan (gelombang sinus)
   playCoin() {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -65,6 +72,7 @@ class SoundSynth {
     osc.stop(this.ctx.currentTime + 0.3);
   }
 
+  // #SFX_STOMP: Frekuensi turun cepat untuk efek menginjak musuh
   playStomp() {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -80,6 +88,7 @@ class SoundSynth {
     osc.stop(this.ctx.currentTime + 0.12);
   }
 
+  // #SFX_GAMEOVER: Tangga nada meluncur turun (descending notes)
   playGameOver() {
     if (!this.ctx) return;
     const notes = [400, 350, 300, 250, 200, 150];
@@ -97,6 +106,7 @@ class SoundSynth {
     });
   }
 
+  // #SFX_WIN: Melodi naik (arpeggio) saat menyelesaikan level
   playWin() {
     if (!this.ctx) return;
     const notes = [261.63, 329.63, 392.0, 523.25, 659.25, 783.99];
@@ -117,9 +127,11 @@ class SoundSynth {
 
 const audio = new SoundSynth();
 
-// ==========================================
-// 3. KONFIGURASI & KONDISI GAME GLOBAL
-// ==========================================
+// ============================================================================
+// #3_STATE_DAN_VARIABEL_GLOBAL
+// Pengaturan FSM (Finite State Machine) dan konfigurasi level.
+// ============================================================================
+// #GAME_STATES: Definisi kondisi alur permainan
 const STATE_START = "START";
 const STATE_PLAYING = "PLAYING";
 const STATE_GAMEOVER = "GAMEOVER";
@@ -129,10 +141,10 @@ let gameState = STATE_START;
 let score = 0;
 let coinsCollected = 0;
 let lives = 3;
-let cameraX = 0;
+let cameraX = 0; // #CAMERA_VARIABLE: Menyimpan posisi kamera horisontal
 
-const LEVEL_WIDTH = 3600;
-const GROUND_Y = 370;
+const LEVEL_WIDTH = 3600; // #LEVEL_BOUNDS: Panjang dunia permainan
+const GROUND_Y = 370;     // #GROUND_LEVEL: Ketinggian permukaan tanah utama
 
 let player;
 let platforms = [];
@@ -147,9 +159,12 @@ let touchLeft = false;
 let touchRight = false;
 let touchJump = false;
 
-// ==========================================
-// 4. KELAS ENTITAS GAME
-// ==========================================
+// ============================================================================
+// #4_KELAS_ENTITAS_GAME
+// Pemodelan objek dalam game (Player, Coin, Enemy, FlagPole, Particle).
+// ============================================================================
+
+// #CLASS_PLAYER: Entitas pemain dan kalkulasi fisika
 class Player {
   constructor(x, y) {
     this.x = x;
@@ -160,13 +175,14 @@ class Player {
     this.vy = 0;
     this.speed = 4.5;
     this.jumpForce = -11.5;
-    this.gravity = 0.55;
+    this.gravity = 0.55;  // #GRAVITY_FORCE: Percepatan gravitasi per-frame
     this.isGrounded = false;
     this.facing = "right";
     this.walkFrame = 0;
-    this.invulnerableTimer = 0;
+    this.invulnerableTimer = 0; // #INVULNERABLE_STATE: Durasi kebal sementara
   }
 
+  // #PLAYER_UPDATE: Pembaruan posisi, kontrol input, dan penanganan fisika
   update() {
     this.vx = 0;
     if (keyIsDown(65) || keyIsDown(LEFT_ARROW) || touchLeft) {
@@ -178,8 +194,9 @@ class Player {
       this.facing = "right";
     }
 
-    this.vy += this.gravity;
+    this.vy += this.gravity; // Aplikasi gravitasi
 
+    // #AXIS_SEPARATED_PHYSICS: Pemisahan deteksi tabrakan X dan Y
     this.x += this.vx;
     this.handleHorizontalCollisions();
 
@@ -187,9 +204,11 @@ class Player {
     this.isGrounded = false;
     this.handleVerticalCollisions();
 
+    // Pembatas batas peta
     if (this.x < 0) this.x = 0;
     if (this.x + this.w > LEVEL_WIDTH) this.x = LEVEL_WIDTH - this.w;
 
+    // #FALL_DEATH: Deteksi pemain jatuh ke dalam jurang
     if (this.y > BASE_HEIGHT + 100) {
       handlePlayerDeath("Jatuh ke jurang!");
     }
@@ -203,6 +222,7 @@ class Player {
     if (this.invulnerableTimer > 0) this.invulnerableTimer--;
   }
 
+  // #PLAYER_JUMP: Eksekusi melompat hanya saat menyentuh pijakan
   jump() {
     if (this.isGrounded) {
       this.vy = this.jumpForce;
@@ -211,6 +231,7 @@ class Player {
     }
   }
 
+  // #COLLISION_HORIZONTAL: Menahan pemain agar tidak menembus dinding
   handleHorizontalCollisions() {
     for (let b of platforms) {
       if (rectOverlap(this.x, this.y, this.w, this.h, b.x, b.y, b.w, b.h)) {
@@ -223,6 +244,7 @@ class Player {
     }
   }
 
+  // #COLLISION_VERTICAL: Menangani pijakan tanah dan benturan atap
   handleVerticalCollisions() {
     for (let b of platforms) {
       if (rectOverlap(this.x, this.y, this.w, this.h, b.x, b.y, b.w, b.h)) {
@@ -238,12 +260,14 @@ class Player {
     }
   }
 
+  // #PLAYER_DRAW: Penggambaran sprite dan efek kedip invulnerability
   draw() {
     push();
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
     if (this.facing === "left") scale(-1, 1);
 
+    // Efek visual kedip saat kebal
     if (this.invulnerableTimer % 6 > 3) {
       pop();
       return;
@@ -255,6 +279,7 @@ class Player {
   }
 }
 
+// #CLASS_COIN: Entitas koin dan animasi putar 2D
 class Coin {
   constructor(x, y) {
     this.x = x;
@@ -269,6 +294,7 @@ class Coin {
     this.animAngle += 0.08;
   }
 
+  // #COIN_SPIN_EFFECT: Animasi pipih horizontal memanfaatkan skala sinusoiodal
   draw() {
     if (this.collected) return;
     this.update();
@@ -285,6 +311,7 @@ class Coin {
   }
 }
 
+// #CLASS_ENEMY: Logika musuh AI sederhana (patroli)
 class Enemy {
   constructor(x, y) {
     this.x = x;
@@ -298,6 +325,7 @@ class Enemy {
     this.walkFrame = 0;
   }
 
+  // #ENEMY_AI_PATROL: Berbalik arah jika membentur tembok atau mendekati jurang
   update() {
     if (this.isSquished) {
       this.squishTimer++;
@@ -308,6 +336,7 @@ class Enemy {
     this.x += this.vx;
     this.walkFrame += 0.15;
 
+    // Tabrakan horizontal dengan rintangan
     for (const b of platforms) {
       if (rectOverlap(this.x, this.y, this.w, this.h - 4, b.x, b.y, b.w, b.h)) {
         this.x = oldX;
@@ -316,6 +345,7 @@ class Enemy {
       }
     }
 
+    // #EDGE_DETECTION: Pencegahan musuh berjalan jatuh ke jurang
     let checkPointX = this.vx > 0 ? this.x + this.w : this.x;
     let isGroundAhead = false;
 
@@ -345,12 +375,13 @@ class Enemy {
     }
   }
 
+  // #ENEMY_DRAW: Penggambaran normal atau bentuk terpipihkan (squished)
   draw() {
     push();
     translate(this.x + this.w / 2, this.y + this.h / 2);
 
     if (this.isSquished) {
-      scale(1.2, 0.3);
+      scale(1.2, 0.3); // Pipihkan sprit musuh
       imageMode(CENTER);
       image(enemyImg, 0, 0, this.w, this.h);
       pop();
@@ -365,6 +396,7 @@ class Enemy {
   }
 }
 
+// #CLASS_FLAGPOLE: Objek tiang bendera pencapai kemenangan
 class FlagPole {
   constructor(x, y) {
     this.x = x;
@@ -397,6 +429,7 @@ class FlagPole {
   }
 }
 
+// #CLASS_PARTICLE: Efek visual partikel pecah/meledak
 class Particle {
   constructor(x, y, color) {
     this.x = x;
@@ -430,13 +463,17 @@ function createParticles(x, y, colorStr, count = 6) {
   }
 }
 
+// #COLLISION_ALGORITHM: AABB (Axis-Aligned Bounding Box) Collision Detection
 function rectOverlap(x1, y1, w1, h1, x2, y2, w2, h2) {
   return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
 }
 
-// ==========================================
-// 5. INISIALISASI LEVEL & RESIZE RESPONSIF
-// ==========================================
+// ============================================================================
+// #5_INISIALISASI_LEVEL_DAN_RESPONSIF
+// Pengaturan responsivitas layar dan pembuatan peta level.
+// ============================================================================
+
+// #RESPONSIVE_CANVAS: Menghitung aspect ratio agar pas di layar tanpa distorsi
 function calculateCanvasSize() {
   let w = windowWidth;
   let h = windowHeight;
@@ -451,12 +488,14 @@ function calculateCanvasSize() {
   return { w: floor(w), h: floor(h) };
 }
 
+// #LEVEL_BUILDER: Inisialisasi struktur tanah, koin, musuh, dan dekorasi
 function initLevel() {
   platforms = [];
   coins = [];
   enemies = [];
   particles = [];
 
+  // Pijakan tanah dengan jurang di antaranya
   const groundSegments = [
     { start: 0, end: 700 },
     { start: 800, end: 1500 },
@@ -474,6 +513,7 @@ function initLevel() {
     });
   }
 
+  // Sebaran koin
   const coinPositions = [
     [150, 320], [180, 320], [370, 320], [410, 320],
     [880, 320], [920, 320], [1100, 320], [1130, 320],
@@ -483,6 +523,7 @@ function initLevel() {
     coins.push(new Coin(pos[0], pos[1]));
   }
 
+  // Sebaran musuh
   enemies.push(new Enemy(450, GROUND_Y - 48));
   enemies.push(new Enemy(950, GROUND_Y - 48));
   enemies.push(new Enemy(1300, GROUND_Y - 48));
@@ -492,6 +533,7 @@ function initLevel() {
 
   flagPole = new FlagPole(3300, GROUND_Y - 240);
 
+  // Latar belakang paralaks (Awan & Bukit)
   clouds = [];
   for (let i = 0; i < 20; i++) {
     clouds.push({
@@ -520,6 +562,7 @@ function resetGameFull() {
   initLevel();
 }
 
+// #HANDLE_PLAYER_DEATH: Mengurangi nyawa atau mengubah state ke GAMEOVER
 function handlePlayerDeath(reason) {
   lives--;
   audio.playGameOver();
@@ -533,9 +576,10 @@ function handlePlayerDeath(reason) {
   }
 }
 
-// ==========================================
-// 6. SETUP & DRAW LOOP RESPONSIF
-// ==========================================
+// ============================================================================
+// #6_P5_SETUP_DAN_DRAW_LOOP
+// Loop utama eksekusi p5.js.
+// ============================================================================
 function setup() {
   const size = calculateCanvasSize();
   const canvas = createCanvas(size.w, size.h);
@@ -552,6 +596,7 @@ function windowResized() {
   resizeCanvas(size.w, size.h);
 }
 
+// #MAIN_DRAW_LOOP: Rendering berulang per frame berdasarkan gameState
 function draw() {
   push();
   scale(scaleFactor);
@@ -568,12 +613,13 @@ function draw() {
     updateGameLogic();
   }
 
+  // #CAMERA_FOLLOW_SMOOTH: Pergerakan kamera halus (lerp) mengikuti pemain
   push();
   const targetCamX = player.x - BASE_WIDTH / 3;
   cameraX = lerp(cameraX, targetCamX, 0.1);
   cameraX = constrain(cameraX, 0, LEVEL_WIDTH - BASE_WIDTH);
 
-  translate(-cameraX, 0);
+  translate(-cameraX, 0); // Pergeseran ruang koordinat berdasarkan kamera
 
   drawParallaxBackground();
   drawPlatforms();
@@ -584,6 +630,7 @@ function draw() {
   flagPole.draw();
   player.draw();
 
+  // Update partikel
   for (let i = particles.length - 1; i >= 0; i--) {
     particles[i].update();
     particles[i].draw();
@@ -592,6 +639,7 @@ function draw() {
 
   pop();
 
+  // Rendering Antarmuka (HUD & Layar Pilihan)
   drawHUD();
 
   if (gameState === STATE_GAMEOVER) {
@@ -603,13 +651,15 @@ function draw() {
   pop();
 }
 
-// ==========================================
-// 7. LOGIKA PERMAINAN (UPDATE LOGIC)
-// ==========================================
+// ============================================================================
+// #7_LOGIKA_INTERAKSI_GAME
+// Interaksi benturan antara pemain, koin, musuh, dan tiang bendera.
+// ============================================================================
 function updateGameLogic() {
   audio.init();
   player.update();
 
+  // #COIN_INTERACTION: Pengambilan koin
   for (let c of coins) {
     if (
       !c.collected &&
@@ -623,6 +673,7 @@ function updateGameLogic() {
     }
   }
 
+  // #ENEMY_INTERACTION: Logika menginjak musuh vs tersentuh musuh
   for (let i = enemies.length - 1; i >= 0; i--) {
     let e = enemies[i];
     e.update();
@@ -636,9 +687,10 @@ function updateGameLogic() {
       !e.isSquished &&
       rectOverlap(player.x, player.y, player.w, player.h, e.x, e.y, e.w, e.h)
     ) {
+      // #STOMP_CHECK: Deteksi jika pemain mendarat dari atas kepala musuh
       if (player.vy > 0 && player.y + player.h - player.vy <= e.y + 12) {
         e.isSquished = true;
-        player.vy = -8;
+        player.vy = -8; // Pantulan lompatan kecil
         score += 200;
         audio.playStomp();
         createParticles(e.x + e.w / 2, e.y, "#92400e", 8);
@@ -648,6 +700,7 @@ function updateGameLogic() {
     }
   }
 
+  // #WIN_CONDITION: Membentur tiang finish
   if (
     rectOverlap(
       player.x,
@@ -665,9 +718,10 @@ function updateGameLogic() {
   }
 }
 
-// ==========================================
-// 8. RENDER GRAFIS & HUD
-// ==========================================
+// ============================================================================
+// #8_RENDER_UI_DAN_HUD
+// Menggambar komponen visual UI/UX layar game.
+// ============================================================================
 function drawParallaxBackground() {
   fill(34, 197, 94);
   noStroke();
@@ -704,6 +758,7 @@ function drawPlatforms() {
   }
 }
 
+// #DRAW_HUD: Menampilkan informasi Skor, Koin, Nyawa, dan Mini Progress Bar
 function drawHUD() {
   push();
   fill(15, 23, 42, 180);
@@ -728,6 +783,7 @@ function drawHUD() {
   fill(255);
   text(`x ${lives}`, 490, 33);
 
+  // Bar Kemajuan Level
   const progress = constrain(player.x / LEVEL_WIDTH, 0, 1);
   fill(51, 65, 85);
   rect(600, 26, 150, 12, 6);
@@ -797,9 +853,12 @@ function drawWinScreen() {
   text("TEKAN 'R' ATAU SPASI UNTUK MAIN LAGI", BASE_WIDTH / 2, 320);
 }
 
-// ==========================================
-// 9. EVENT LISTENERS (KEYBOARD & TOUCH)
-// ==========================================
+// ============================================================================
+// #9_INPUT_HANDLERS
+// Menangani kontrol masukan berupa Keyboard, Mouse, dan Layar Sentuh.
+// ============================================================================
+
+// #KEYBOARD_INPUT: Kontrol input tombol keyboard
 function keyPressed() {
   audio.init();
 
@@ -829,6 +888,7 @@ function mousePressed() {
   }
 }
 
+// #TOUCH_INPUT: Listener tombol UI Touchscreen untuk perangkat seluler
 function setupTouchEvents() {
   const btnLeft = document.getElementById("btn-left");
   const btnRight = document.getElementById("btn-right");
